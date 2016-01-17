@@ -1,0 +1,103 @@
+enable cli scripting output
+enable clipaging
+# @METADATASTART
+#@DetailDescriptionStart
+#############################################################################
+#
+# Script        : base.xsf
+# Revision      : 1.0
+# Last Updated  : Jan 2016
+#
+# Purpose: Base config for switch. Loaded from DHCP. It determines
+#    Model: And then loads a config file, from an TFTP server, based on the
+#           model
+#    System MAC: And the loads a config file specific for that device 
+#
+#############################################################################
+#@DetailDescriptionEnd
+
+# Global vars
+set var TFTPD 192.168.56.1
+set var targetIMG 16.1.2.x
+set var Upgrade "no"
+
+
+create log message "Starting Configuration Process"
+create log message "Downloading file common.xsf from $(TFTPD)"
+tftp get $TFTPD common.xsf force-overwrite
+
+# Get System MAC and load config file
+set var CLI.OUT 0
+show system | grep MAC
+set var lineMAC (${CLI.OUT})
+set var MAC $TCL(lindex $lineMAC 2)
+set var MAC $TCL(split $MAC :)
+set var MAC $TCL(join $MAC {})
+set var deviceFILE $TCL (list $MAC .xsf)
+set var deviceFILE $TCL(join $deviceFILE {})
+create log message "Downloading file $deviceFILE from $(TFTPD) "
+tftp get $TFTPD $deviceFILE force-overwrite
+
+# Get System MAC and load config file
+set var CLI.OUT 0
+show switch | grep Type
+set var lineType (${CLI.OUT})
+set var Type $TCL(lindex $lineType 2)
+set var modelFILE $TCL (list $Type .xsf)
+set var modelFILE $TCL(join $modelFILE {})
+create log message "Downloading file $modelFILE from $(TFTPD)"
+tftp get $TFTPD $modelFILE force-overwrite
+
+# Apply common config
+create log message "Applying common config"
+load script common.xsf
+
+
+# Apply config for this model
+create log message "Applying model specific config"
+load script $modelFILE
+
+# Apply config for this device
+create log message "Applying device specific config"
+load script $deviceFILE
+
+# Is firmware update necessary?
+set var CLI.OUT 0
+show version | grep Image
+set var currentVER $TCL(lindex ${CLI.OUT} 4)
+IF ( $MATCH($currentVER,$targetVER) != 0 ) THEN
+    create log message "Device needs upgrade. Current $(currentVER), Target: $(targetVER)"
+    IF ($MATCH($Upgrade,"no")==0) THEN
+        create log message "Image upgrade disabled. Skipping"
+    ELSE
+        create log message "Upgrading Image"
+        # Download OS
+        set var CLI.OUT 0
+        show system | grep "Image Booted"
+        set var partition $TCL(lindex ${CLI.OUT} 2)
+        show var partition
+        IF ($MATCH($partition,"primary")==0) THEN
+          set var partition "secondary"
+        ELSE
+          set var partition "primary"
+		ENDIF        
+        download image $TFTPD $targetIMG $partition
+        # Download XMODs
+        set var i 0
+        set var l $TCL(llength $targetMOD)
+        WHILE (  $i < $l ) DO
+           set var xmod $TCL(lindex $targetMOD $i)
+           create log message "Downloading xmod $(xmod)"
+           download image $TFTPD $xmod $partition
+           set var i ($i+1)
+        ENDWHILE
+        use image $partition
+    ENDIF
+ELSE
+    create log message "Device doesn't needs upgrade."
+ENDIF
+
+save config
+disable cli prompting
+reboot 
+

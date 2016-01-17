@@ -1,0 +1,14 @@
+#############################################################################
+#
+# Script        : Summit-PC.xsf
+#
+# Purpose: This is the script to set up Summit-PC model switches 
+#############################################################################
+
+# Variables
+set var targetVER "16.1.1.4"
+set var targetIMG "exospc-16.1.1.4.xos"
+set var targetMOD "exospc-16.1.1.4-ssh.xmod"
+
+# Model specific configuration
+# configure snmp syslocation "This is a test"

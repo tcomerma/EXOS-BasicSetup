@@ -1,0 +1,11 @@
+#############################################################################
+#
+# Script        : common.xsf
+#
+# Purpose: This is the script to set up all switches 
+#############################################################################
+
+# Variables
+
+# Common configuration
+# configure snmp syslocation "This is a test"

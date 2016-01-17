@@ -1,0 +1,14 @@
+#############################################################################
+#
+# Script        : 08002711F129.xsf
+#
+# Purpose: This is the script to set up the device with 08002711F129 system mac
+#############################################################################
+
+# Variables
+set var Upgrade "no"
+
+# Specific configuration
+# unconfigure vlan Mgmt ipaddress
+# configure vlan Mgmt ipaddress 192.168.56.100
+# configure iproute add default 192.168.56.1 vr VR-Mgmt
